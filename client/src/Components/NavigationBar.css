@@ -1,0 +1,12 @@
+.navbar {
+  background-color: lightgray; /* Change background color to light gray */
+  transition: background-color 0.3s ease-in-out; /* Adjust transition only for background-color */
+}
+
+.navbar-open {
+  transform: translateY(0);
+}
+
+.navbar-closed {
+  transform: translateY(-100%);
+}
