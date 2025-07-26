@@ -77,65 +77,93 @@ if (fs.existsSync(buildPath)) {
   console.log('Build directory not found, skipping static file serving');
 }
 
-// API routes
+// API routes - Load before static files to ensure they take precedence
+console.log('=== Loading API Routes ===');
+
+// Load mentor routes
+let mentorRoutes = null;
 try {
   console.log('Loading mentor routes...');
-  const fs = require('fs');
-  const mentorRoutesPath = './backend/routes/mentorRoutes.js';
-  const studentRoutesPath = './backend/routes/studentRoutes.js';
-  
-  console.log('Checking if mentor routes file exists:', fs.existsSync(mentorRoutesPath));
-  console.log('Checking if student routes file exists:', fs.existsSync(studentRoutesPath));
-  
-  const mentorRoutes = require(mentorRoutesPath);
-  console.log('Mentor routes loaded:', typeof mentorRoutes);
-  
-  console.log('Loading student routes...');
-  const studentRoutes = require(studentRoutesPath);
-  console.log('Student routes loaded:', typeof studentRoutes);
-  
-  if (typeof mentorRoutes === 'function') {
-    app.use('/mentors', mentorRoutes);
-    console.log('Mentor routes mounted successfully');
-  } else {
-    console.error('Mentor routes is not a valid Express router, type:', typeof mentorRoutes);
-    // Add fallback mentor routes
-    app.get('/mentors', (req, res) => {
-      res.json({ message: 'Mentor routes not properly loaded' });
-    });
-  }
-  
-  if (typeof studentRoutes === 'function') {
-    app.use('/students', studentRoutes);
-    console.log('Student routes mounted successfully');
-  } else {
-    console.error('Student routes is not a valid Express router, type:', typeof studentRoutes);
-    // Add fallback student routes
-    app.get('/students', (req, res) => {
-      res.json({ message: 'Student routes not properly loaded' });
-    });
-  }
-  
-  // Add a route to check if API routes are working
-  app.get('/api-status', (req, res) => {
-    res.json({
-      status: 'API Routes Status',
-      mentorRoutes: typeof mentorRoutes === 'function' ? 'Loaded' : 'Failed',
-      studentRoutes: typeof studentRoutes === 'function' ? 'Loaded' : 'Failed',
-      database: db ? 'Available' : 'Not Available'
-    });
-  });
-  
+  mentorRoutes = require('./backend/routes/mentorRoutes');
+  console.log('✅ Mentor routes loaded successfully');
 } catch (error) {
-  console.error('Error loading routes:', error);
-  // Fallback routes for basic functionality
+  console.error('❌ Error loading mentor routes:', error.message);
+}
+
+// Load student routes
+let studentRoutes = null;
+try {
+  console.log('Loading student routes...');
+  studentRoutes = require('./backend/routes/studentRoutes');
+  console.log('✅ Student routes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading student routes:', error.message);
+}
+
+// Mount API routes
+if (mentorRoutes && typeof mentorRoutes === 'function') {
+  app.use('/mentors', mentorRoutes);
+  console.log('✅ Mentor routes mounted at /mentors');
+} else {
+  console.log('⚠️  Using fallback mentor routes');
   app.get('/mentors', (req, res) => {
-    res.json({ message: 'Mentor routes not available', error: error.message });
-  });
-  app.get('/students', (req, res) => {
-    res.json({ message: 'Student routes not available', error: error.message });
+    res.json({ message: 'Mentor routes not available' });
   });
 }
+
+if (studentRoutes && typeof studentRoutes === 'function') {
+  app.use('/students', studentRoutes);
+  console.log('✅ Student routes mounted at /students');
+} else {
+  console.log('⚠️  Using fallback student routes');
+  app.get('/students', (req, res) => {
+    res.json({ message: 'Student routes not available' });
+  });
+}
+
+// API status endpoint
+app.get('/api-status', (req, res) => {
+  res.json({
+    status: 'API Routes Status',
+    mentorRoutes: mentorRoutes && typeof mentorRoutes === 'function' ? 'Loaded' : 'Failed',
+    studentRoutes: studentRoutes && typeof studentRoutes === 'function' ? 'Loaded' : 'Failed',
+    database: db ? 'Available' : 'Not Available',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Basic fallback API endpoints
+app.get('/api/students', (req, res) => {
+  if (!db) {
+    return res.status(500).json({ error: 'Database not available' });
+  }
+  
+  const query = 'SELECT * FROM students ORDER BY id';
+  db.query(query, (err, results) => {
+    if (err) {
+      res.status(500).json({ error: 'Database query failed', message: err.message });
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+app.get('/api/mentors', (req, res) => {
+  if (!db) {
+    return res.status(500).json({ error: 'Database not available' });
+  }
+  
+  const query = 'SELECT * FROM mentors ORDER BY id';
+  db.query(query, (err, results) => {
+    if (err) {
+      res.status(500).json({ error: 'Database query failed', message: err.message });
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+console.log('=== API Routes Loading Complete ===');
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {

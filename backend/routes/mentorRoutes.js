@@ -9,6 +9,11 @@ const {
 } = require("../controllers/mentorControllers");
 const router = express.Router();
 
+// Test endpoint to verify route is working
+router.get("/test", (req, res) => {
+  res.json({ message: "Mentor routes are working!", timestamp: new Date().toISOString() });
+});
+
 // Endpoint for searching mentors
 router.get("/search", searchMentor);
 
