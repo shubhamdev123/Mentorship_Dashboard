@@ -1,56 +1,52 @@
 const db = require("../config/db");
 
 // Controller for searching mentors
-const searchMentor = (req, res) => {
-  const searchQuery = req.query.q.toLowerCase();
+const searchMentor = async (req, res) => {
+  try {
+    const searchQuery = req.query.q?.toLowerCase() || '';
+    
+    const result = await db.query(
+      `SELECT * FROM mentors WHERE LOWER(name) LIKE $1 OR LOWER(email) LIKE $1`,
+      [`%${searchQuery}%`]
+    );
 
-  const searchMentorQuery = `SELECT * FROM mentors WHERE LOWER(name) LIKE '%${searchQuery}%' OR LOWER(email) LIKE '%${searchQuery}%'`;
-
-  db.query(searchMentorQuery, (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).send("Internal Server Error");
-    }
-
-    res.status(200).send(result);
-  });
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
 };
 
 // Controller for getting assigned students for a mentor
-const getAssignedStudents = (req, res) => {
-  const mentorId = req.params.mentorId;
+const getAssignedStudents = async (req, res) => {
+  try {
+    const mentorId = req.params.mentorId;
 
-  // First, check if the mentor exists
-  const checkMentorQuery = `SELECT * FROM mentors WHERE id = ${mentorId}`;
-  db.query(checkMentorQuery, (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).send("Internal Server Error");
-    }
-
+    // First, check if the mentor exists
+    const mentorResult = await db.query(`SELECT * FROM mentors WHERE id = $1`, [mentorId]);
+    
     // If the mentor doesn't exist, send a 404 error
-    if (result.length === 0) {
+    if (mentorResult.rows.length === 0) {
       res.status(404).send("Mentor not able to find");
       return;
     }
 
     // If the mentor exists, get all the students assigned to them along with their marks
-    const getStudentsQuery = `
-      SELECT students.id, students.name, students.email, students.phone, students.evaluated_by, student_marks.idea_marks, student_marks.execution_marks, student_marks.presentation_marks, student_marks.communication_marks, student_marks.total_marks
+    const studentsResult = await db.query(`
+      SELECT students.id, students.name, students.email, students.phone, students.evaluated_by, 
+             student_marks.idea_marks, student_marks.execution_marks, student_marks.presentation_marks, 
+             student_marks.communication_marks, student_marks.total_marks
       FROM students
       LEFT JOIN student_marks ON students.id = student_marks.student_id
-      WHERE students.mentor_id = ${mentorId}
-    `;
-    db.query(getStudentsQuery, (err, result) => {
-      if (err) {
-        console.log(err);
-        return res.status(500).send("Internal Server Error");
-      }
+      WHERE students.mentor_id = $1
+    `, [mentorId]);
 
-      // Return the list of students and their marks
-      res.status(200).send(result);
-    });
-  });
+    // Return the list of students and their marks
+    res.status(200).json(studentsResult.rows);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
 };
 
 // Controller for assigning students to a mentor

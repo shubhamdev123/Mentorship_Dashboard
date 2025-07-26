@@ -1,69 +1,53 @@
 const { Pool } = require('pg');
 
 const connection = new Pool({
-  connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER || 'root'}:${process.env.DB_PASSWORD || 'Amplifier26#'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'dashboard'}`,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'dashboard',
+  password: process.env.DB_PASSWORD || '',
+  port: process.env.DB_PORT || 5432,
 });
 
+// Initialize database schema
+async function initializeDatabase() {
+  try {
+    // Create tables
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS mentors (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(20) NOT NULL
+      )`);
 
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS students (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(20) NOT NULL,
+        mentor_id INTEGER REFERENCES mentors(id),
+        evaluated_by INTEGER REFERENCES mentors(id)
+      )`);
 
-// Create the "dashboard" database if it doesn't already exist
-connection.query('CREATE DATABASE IF NOT EXISTS dashboard', (err) => {
-  if (err) throw err;
-  console.log('Database created');
-});
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS student_marks (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER NOT NULL REFERENCES students(id),
+        idea_marks INTEGER DEFAULT 0,
+        execution_marks INTEGER DEFAULT 0,
+        presentation_marks INTEGER DEFAULT 0,
+        communication_marks INTEGER DEFAULT 0,
+        total_marks INTEGER GENERATED ALWAYS AS (idea_marks + execution_marks + presentation_marks + communication_marks) STORED
+      )`);
 
-// Connect to the "dashboard" database
-connection.query('USE dashboard', (err) => {
-  if (err) throw err;
-  console.log('Using database: dashboard');
-});
+    console.log('Database tables created successfully');
+  } catch (error) {
+    console.error('Error initializing database:', error);
+  }
+}
 
-// Create the "mentors" table
-connection.query(`
-  CREATE TABLE IF NOT EXISTS mentors (
-    id INT NOT NULL AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    PRIMARY KEY (id)
-  )`, (err) => {
-    if (err) throw err;
-    console.log('Mentors table created');
-  });
-
-// Create the "students" table
-connection.query(`
-  CREATE TABLE IF NOT EXISTS students (
-    id INT NOT NULL AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    mentor_id INT,
-    evaluated_by INT,
-    PRIMARY KEY (id),
-    FOREIGN KEY (mentor_id) REFERENCES mentors(id),
-    FOREIGN KEY (evaluated_by) REFERENCES mentors(id)
-  )`, (err) => {
-    if (err) throw err;
-    console.log('Students table created');
-  });
-
-// Create the "student_marks" table
-connection.query(`
-  CREATE TABLE IF NOT EXISTS student_marks (
-    id INT NOT NULL AUTO_INCREMENT,
-    student_id INT NOT NULL,
-    idea_marks INT DEFAULT 0,
-    execution_marks INT DEFAULT 0,
-    presentation_marks INT DEFAULT 0,
-    communication_marks INT DEFAULT 0,
-    total_marks INT AS (idea_marks + execution_marks + presentation_marks + communication_marks) STORED,
-    PRIMARY KEY (id),
-    FOREIGN KEY (student_id) REFERENCES students(id)
-  )`, (err) => {
-    if (err) throw err;
-    console.log('Student marks table created');
-  });
+// Initialize database on startup
+initializeDatabase();
 
 module.exports = connection;

@@ -4,44 +4,45 @@ const fs = require("fs");
 const nodemailer = require("nodemailer");
 
 // Controller for getting students by search string
-const searchStudent = (req, res) => {
-  const searchQuery = req.query.q;
-  const searchParam = `%${searchQuery.toLowerCase()}%`;
+const searchStudent = async (req, res) => {
+  try {
+    const searchQuery = req.query.q?.toLowerCase() || '';
+    const searchParam = `%${searchQuery}%`;
 
-  const searchStudentQuery = `
-    SELECT * FROM students
-    WHERE LOWER(name) LIKE ?
-    OR LOWER(email) LIKE ?
-  `;
+    const result = await db.query(`
+      SELECT * FROM students
+      WHERE LOWER(name) LIKE $1
+      OR LOWER(email) LIKE $2
+    `, [searchParam, searchParam]);
 
-  db.query(searchStudentQuery, [searchParam, searchParam], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).send("Internal Server Error");
-    }
-
-    res.status(200).json(result);
-  });
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
 };
 
 // Controller for getting student marks by student id
-const getStudentMarks = (req, res) => {
-  const id = req.params.id;
-  const query = `
-    SELECT s.id, s.name, s.email, s.phone, sm.idea_marks, sm.execution_marks, sm.presentation_marks, sm.communication_marks, sm.total_marks
-    FROM students AS s
-    LEFT JOIN student_marks AS sm ON s.id = sm.student_id
-    WHERE s.id = ?
-  `;
+const getStudentMarks = async (req, res) => {
+  try {
+    const id = req.params.id;
+    
+    const result = await db.query(`
+      SELECT s.id, s.name, s.email, s.phone, sm.idea_marks, sm.execution_marks, sm.presentation_marks, sm.communication_marks, sm.total_marks
+      FROM students AS s
+      LEFT JOIN student_marks AS sm ON s.id = sm.student_id
+      WHERE s.id = $1
+    `, [id]);
 
-  db.query(query, [id], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).send("Internal Server Error");
+    if (result.rows.length === 0) {
+      return res.status(404).send("Student not found");
     }
 
-    res.status(200).json(result[0]);
-  });
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
 };
 
 // Controller for generating PDF and sending email with PDF attached
