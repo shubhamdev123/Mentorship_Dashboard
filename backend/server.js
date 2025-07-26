@@ -10,6 +10,7 @@ require('dotenv').config(); // Load environment variables from .env file
 const mentorRoutes = require("./routes/mentorRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const testRoutes = require("./routes/testRoutes");
+const debugRoutes = require("./routes/debugRoutes");
 
 const app = express();
 
@@ -24,12 +25,25 @@ app.use(express.static(path.join(__dirname, '../client/build')));
 app.use("/mentors", mentorRoutes);
 app.use("/students", studentRoutes);
 app.use("/test", testRoutes);
+app.use("/debug", debugRoutes);
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/build/index.html'));
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
 });
