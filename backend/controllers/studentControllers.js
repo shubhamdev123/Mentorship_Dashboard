@@ -14,7 +14,7 @@ const searchStudent = (req, res) => {
     OR LOWER(email) LIKE ?
   `;
 
-  db.query(searchStudentQuery, [searchParam, searchParam], (err, result) => {
+  query(searchStudentQuery, [searchParam, searchParam], (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).send("Internal Server Error");
@@ -34,7 +34,7 @@ const getStudentMarks = (req, res) => {
     WHERE s.id = ?
   `;
 
-  db.query(query, [id], (err, result) => {
+  query(query, [id], (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).send("Internal Server Error");
@@ -55,7 +55,7 @@ const generatePDFandMail = async (req, res) => {
   WHERE s.id = ?
 `;
 
-  db.query(query, [studentId], (err, result) => {
+  query(query, [studentId], (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).send("Internal Server Error");

@@ -22,7 +22,7 @@ const getAssignedStudents = (req, res) => {
 
   // First, check if the mentor exists
   const checkMentorQuery = `SELECT * FROM mentors WHERE id = ${mentorId}`;
-  db.query(checkMentorQuery, (err, result) => {
+  query(checkMentorQuery, (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).send("Internal Server Error");
@@ -41,7 +41,7 @@ const getAssignedStudents = (req, res) => {
       LEFT JOIN student_marks ON students.id = student_marks.student_id
       WHERE students.mentor_id = ${mentorId}
     `;
-    db.query(getStudentsQuery, (err, result) => {
+    query(getStudentsQuery, (err, result) => {
       if (err) {
         console.log(err);
         return res.status(500).send("Internal Server Error");
@@ -59,7 +59,7 @@ const assignStudent = (req, res) => {
 
   // Check if the mentor exists in the database
   const getMentorQuery = `SELECT * FROM mentors WHERE id = ${mentorId}`;
-  db.query(getMentorQuery, (err, result) => {
+  query(getMentorQuery, (err, result) => {
     if (err) {
       console.error(err);
       return res.status(500).send("Internal server error");
@@ -71,7 +71,7 @@ const assignStudent = (req, res) => {
 
     // Check if the mentor already has 4 students assigned
     const countStudentsQuery = `SELECT COUNT(*) as count FROM students WHERE mentor_id = ${mentorId}`;
-    db.query(countStudentsQuery, (err, result) => {
+    query(countStudentsQuery, (err, result) => {
       if (err) {
         console.error(err);
         return res.status(500).send("Internal server error");
@@ -82,36 +82,34 @@ const assignStudent = (req, res) => {
         return res.status(400).send("Mentor already has 4 students assigned");
       }
 
-      // Check if the students already have a mentor assigned
+      // Check if the students already have a mentor assigned (but allow reassignment)
       const getStudentsQuery = `SELECT * FROM students WHERE id IN (${studentIds.join(
         ","
       )}) AND mentor_id IS NOT NULL`;
-      db.query(getStudentsQuery, (err, result) => {
+      query(getStudentsQuery, (err, result) => {
         if (err) {
           console.error(err);
           return res.status(500).send("Internal server error");
         }
 
+        // Log students that will be reassigned
         if (result.length > 0) {
-          return res
-            .status(400)
-            .send("One or more students already have a mentor assigned");
+          console.log(`Reassigning ${result.length} students from their current mentors`);
         }
 
-        // Check if the students have already been evaluated
+        // Check if the students have already been evaluated (but allow reassignment)
         const getEvaluatedStudentsQuery = `SELECT * FROM students WHERE id IN (${studentIds.join(
           ","
         )}) AND evaluated_by IS NOT NULL`;
-        db.query(getEvaluatedStudentsQuery, (err, result) => {
+        query(getEvaluatedStudentsQuery, (err, result) => {
           if (err) {
             console.error(err);
             return res.status(500).send("Internal server error");
           }
 
+          // Log students that have been evaluated but will be reassigned
           if (result.length > 0) {
-            return res
-              .status(400)
-              .send("One or more students have already been evaluated");
+            console.log(`Reassigning ${result.length} students who have already been evaluated`);
           }
 
           // Check if number of students to be assigned + number of already assigned students > 4
@@ -125,7 +123,7 @@ const assignStudent = (req, res) => {
           const assignStudentsQuery = `UPDATE students SET mentor_id = ${mentorId} WHERE id IN (${studentIds.join(
             ","
           )})`;
-          db.query(assignStudentsQuery, (err, result) => {
+          query(assignStudentsQuery, (err, result) => {
             if (err) {
               console.error(err);
               return res.status(500).send("Internal server error");
@@ -133,7 +131,7 @@ const assignStudent = (req, res) => {
 
             return res
               .status(200)
-              .send("Students assigned to mentor successfully");
+              .send("Students assigned/reassigned to mentor successfully");
           });
         });
       });
@@ -148,7 +146,7 @@ const unassignStudent = (req, res) => {
 
   // First, check if the mentor exists
   const checkMentorQuery = `SELECT * FROM mentors WHERE id = ${mentorId}`;
-  db.query(checkMentorQuery, (err, result) => {
+  query(checkMentorQuery, (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).send("Internal Server Error");
@@ -162,7 +160,7 @@ const unassignStudent = (req, res) => {
 
     // If the mentor exists, check if the student is assigned to them
     const checkStudentQuery = `SELECT * FROM students WHERE id = ${studentId} AND mentor_id = ${mentorId}`;
-    db.query(checkStudentQuery, (err, result) => {
+    query(checkStudentQuery, (err, result) => {
       if (err) {
         console.log(err);
         return res.status(500).send("Internal Server Error");
@@ -176,7 +174,7 @@ const unassignStudent = (req, res) => {
 
       // Remove the student from the mentor's list of assigned students
       const removeStudentQuery = `UPDATE students SET mentor_id = NULL WHERE id = ${studentId}`;
-      db.query(removeStudentQuery, (err, result) => {
+      query(removeStudentQuery, (err, result) => {
         if (err) {
           console.log(err);
           return res.status(500).send("Internal Server Error");
@@ -201,7 +199,7 @@ const markStudent = (req, res) => {
 
   // First, check if the mentor exists
   const checkMentorQuery = `SELECT * FROM mentors WHERE id = ${mentorId}`;
-  db.query(checkMentorQuery, (err, result) => {
+  query(checkMentorQuery, (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).send("Internal Server Error");
@@ -215,7 +213,7 @@ const markStudent = (req, res) => {
 
     // If the mentor exists, check if the student is assigned to them
     const checkStudentQuery = `SELECT * FROM students WHERE id = ${studentId} AND mentor_id = ${mentorId}`;
-    db.query(checkStudentQuery, (err, result) => {
+    query(checkStudentQuery, (err, result) => {
       if (err) {
         console.log(err);
         return res.status(500).send("Internal Server Error");
@@ -229,7 +227,7 @@ const markStudent = (req, res) => {
 
       // If the student is assigned to the mentor, check if the student evaluation has been completed already
       const checkStudentEvaluationCompleted = `SELECT * FROM students WHERE id = ${studentId} AND evaluated_by IS NOT NULL`;
-      db.query(checkStudentEvaluationCompleted, (err, result) => {
+      query(checkStudentEvaluationCompleted, (err, result) => {
         if (err) {
           console.log(err);
           return res.status(500).send("Internal Server Error");
@@ -242,7 +240,7 @@ const markStudent = (req, res) => {
 
       // If the student evaluation has not been completed, then check if student has been marked
       const checkMarkedQuery = `SELECT * FROM student_marks WHERE student_id = ${studentId}`;
-      db.query(checkMarkedQuery, (err, result) => {
+      query(checkMarkedQuery, (err, result) => {
         if (err) {
           console.log(err);
           return res.status(500).send("Internal Server Error");
@@ -272,7 +270,7 @@ const markStudent = (req, res) => {
           updateMarksQuery = updateMarksQuery.slice(0, -1);
           updateMarksQuery += ` WHERE student_id = ${studentId}`;
 
-          db.query(updateMarksQuery, (err, result) => {
+          query(updateMarksQuery, (err, result) => {
             if (err) {
               console.log(err);
               return res.status(500).send("Internal Server Error");
@@ -289,7 +287,7 @@ const markStudent = (req, res) => {
             communication_marks || null
           }, ${total})`;
 
-          db.query(addMarksQuery, (err, result) => {
+          query(addMarksQuery, (err, result) => {
             if (err) {
               console.log(err);
               return res.status(500).send("Internal Server Error");
@@ -310,7 +308,7 @@ const evaluateStudent = (req, res) => {
 
   // Check if the student exists
   const checkStudentQuery = `SELECT * FROM students WHERE id = ${studentId}`;
-  db.query(checkStudentQuery, (err, result) => {
+  query(checkStudentQuery, (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).send("Internal Server Error");
@@ -324,7 +322,7 @@ const evaluateStudent = (req, res) => {
 
     // If the student exists, check if the mentor exists
     const checkMentorQuery = `SELECT * FROM mentors WHERE id = ${mentorId}`;
-    db.query(checkMentorQuery, (err, result) => {
+    query(checkMentorQuery, (err, result) => {
       if (err) {
         console.log(err);
         return res.status(500).send("Internal Server Error");
@@ -338,7 +336,7 @@ const evaluateStudent = (req, res) => {
 
       // If the mentor exists, check if the student is assigned to them
       const checkStudentMentorQuery = `SELECT * FROM students WHERE id = ${studentId} AND mentor_id = ${mentorId}`;
-      db.query(checkStudentMentorQuery, (err, result) => {
+      query(checkStudentMentorQuery, (err, result) => {
         if (err) {
           console.log(err);
           return res.status(500).send("Internal Server Error");
@@ -352,7 +350,7 @@ const evaluateStudent = (req, res) => {
 
         // If the student is assigned to the mentor, update the evaluated_by column of the student with the mentor_id
         const updateEvaluatedByQuery = `UPDATE students SET evaluated_by = ${mentorId} WHERE id = ${studentId}`;
-        db.query(updateEvaluatedByQuery, (err, result) => {
+        query(updateEvaluatedByQuery, (err, result) => {
           if (err) {
             console.log(err);
             return res.status(500).send("Internal Server Error");

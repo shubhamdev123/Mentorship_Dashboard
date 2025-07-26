@@ -5,7 +5,18 @@ let connection = null;
 try {
   if (process.env.DATABASE_URL) {
     console.log('Using DATABASE_URL for connection');
-    connection = mysql.createConnection(process.env.DATABASE_URL);
+    // Parse DATABASE_URL to extract connection parameters
+    const url = new URL(process.env.DATABASE_URL);
+    connection = mysql.createConnection({
+      host: url.hostname,
+      user: url.username,
+      password: url.password,
+      port: url.port || 3306,
+      database: url.pathname.substring(1), // Remove leading slash
+      ssl: {
+        rejectUnauthorized: false
+      }
+    });
   } else {
     console.log('Using local database configuration');
     connection = mysql.createConnection({
@@ -22,9 +33,16 @@ try {
     if (err) {
       console.error('Error connecting to database:', err);
       console.log('Database connection failed, but continuing...');
+      console.log('Connection details:', {
+        host: connection.config.host,
+        user: connection.config.user,
+        database: connection.config.database,
+        port: connection.config.port
+      });
       return;
     }
     console.log('Connected to database server successfully');
+    console.log('Connected to database:', connection.config.database);
     
     // Create tables after successful connection
     createTables();

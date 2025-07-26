@@ -6,20 +6,23 @@ const port = process.env.PORT || 3001; // Port number for the server to listen o
 require('dotenv').config(); // Load environment variables from .env file
 
 // Import the route handlers for mentors and students with error handling
-let mentorRoutes, studentRoutes;
+let mentorRoutes, studentRoutes, seedRoutes;
 
 try {
   mentorRoutes = require("./routes/mentorRoutes");
   studentRoutes = require("./routes/studentRoutes");
+  seedRoutes = require("./routes/seedRoutes");
 } catch (error) {
   console.error('Error loading routes:', error);
   // Create fallback routes
   mentorRoutes = express.Router();
   studentRoutes = express.Router();
+  seedRoutes = express.Router();
   
   // Add fallback endpoints
   mentorRoutes.get('*', (req, res) => res.status(500).json({ error: 'Mentor routes not available' }));
   studentRoutes.get('*', (req, res) => res.status(500).json({ error: 'Student routes not available' }));
+  seedRoutes.get('*', (req, res) => res.status(500).json({ error: 'Seed routes not available' }));
 }
 
 const app = express();
@@ -34,6 +37,7 @@ app.use(express.static(path.join(__dirname, '../client/build')));
 // Route handlers for the mentor and student routes
 app.use("/mentors", mentorRoutes);
 app.use("/students", studentRoutes);
+app.use("/seed", seedRoutes);
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {

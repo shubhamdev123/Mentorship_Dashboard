@@ -35,12 +35,21 @@ const StudentSelectPage = () => {
 
   // Function to handle student selection/deselection
   const handleStudentSelect = (student) => {
+    console.log('Student selected:', student);
+    console.log('Current selected students:', selectedStudents);
+    
     // Check if student is already selected
-    if (!selectedStudents.map((s) => s.id).includes(student.id)) {
+    const isAlreadySelected = selectedStudents.some((s) => s.id === student.id);
+    
+    if (!isAlreadySelected) {
       // Check if there are already 4 selected students
       if (selectedStudents.length < 4) {
         // Add student to selected students
-        setSelectedStudents([...selectedStudents, student]);
+        const newSelectedStudents = [...selectedStudents, student];
+        setSelectedStudents(newSelectedStudents);
+        console.log('Updated selected students:', newSelectedStudents);
+      } else {
+        alert("You can only select up to 4 students");
       }
     } else {
       handleStudentDeselect(student);
@@ -49,8 +58,11 @@ const StudentSelectPage = () => {
 
   // Function to handle student deselection
   const handleStudentDeselect = (student) => {
+    console.log('Student deselected:', student);
     // Remove student from selected students
-    setSelectedStudents(selectedStudents.filter((s) => s.id !== student.id));
+    const newSelectedStudents = selectedStudents.filter((s) => s.id !== student.id);
+    setSelectedStudents(newSelectedStudents);
+    console.log('Updated selected students after deselection:', newSelectedStudents);
   };
 
   // Function to handle confirmation of selected students and assign them to the mentor
@@ -64,23 +76,39 @@ const StudentSelectPage = () => {
       if (selectedStudents.length > 4) {
         alert("Please select at most 4 students");
       } else {
-        try {
-          const data = await assignStudent(
-            mentor.id,
-            selectedStudents.map((student) => student.id)
-          );
-          console.log('API response:', data);
-          
-          if (typeof data === "string") {
-            setMessage(data);
-            console.log('Error message set:', data);
-          } else {
-            console.log('Navigating to student-view');
-            navigate("/student-view");
+        // Check if any students are being reassigned
+        const reassignedStudents = selectedStudents.filter(student => student.mentor_id);
+        const evaluatedStudents = selectedStudents.filter(student => student.evaluated_by);
+        
+        let confirmationMessage = `Assign ${selectedStudents.length} student(s) to ${mentor.name}?`;
+        
+        if (reassignedStudents.length > 0) {
+          confirmationMessage += `\n\n⚠️ ${reassignedStudents.length} student(s) will be reassigned from their current mentor.`;
+        }
+        
+        if (evaluatedStudents.length > 0) {
+          confirmationMessage += `\n\nℹ️ ${evaluatedStudents.length} student(s) have already been evaluated.`;
+        }
+        
+        if (window.confirm(confirmationMessage)) {
+          try {
+            const data = await assignStudent(
+              mentor.id,
+              selectedStudents.map((student) => student.id)
+            );
+            console.log('API response:', data);
+            
+            if (typeof data === "string") {
+              setMessage(data);
+              console.log('Error message set:', data);
+            } else {
+              console.log('Navigating to student-view');
+              navigate("/student-view");
+            }
+          } catch (error) {
+            console.error('Error in handleConfirmSelection:', error);
+            setMessage('An error occurred while assigning students');
           }
-        } catch (error) {
-          console.error('Error in handleConfirmSelection:', error);
-          setMessage('An error occurred while assigning students');
         }
       }
     } else {
@@ -90,14 +118,24 @@ const StudentSelectPage = () => {
 
   // Function to fetch students matching the search string from the server
   const fetchStudents = async (searchString) => {
-    const data = await searchStudent(searchString);
-    if (typeof data === "string") {
-      setMessage(data);
-    } else {
-      const sortedData = data.sort((a, b) => {
-        return a.name.localeCompare(b.name);
-      });
-      setStudents(sortedData);
+    console.log('Fetching students with search string:', searchString);
+    try {
+      const data = await searchStudent(searchString);
+      console.log('API response:', data);
+      
+      if (typeof data === "string") {
+        setMessage(data);
+        console.log('Error message set:', data);
+      } else {
+        const sortedData = data.sort((a, b) => {
+          return a.name.localeCompare(b.name);
+        });
+        console.log('Setting students:', sortedData);
+        setStudents(sortedData);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      setMessage('Error fetching students');
     }
   };
   
@@ -163,9 +201,11 @@ const StudentSelectPage = () => {
                   <Card
                     key={student.id}
                     className="m-2 student-card"
+                    style={{ cursor: 'pointer' }}
                     onClick={() => {
-                      if (!student.evaluated_by && !student.mentor_id)
-                        handleStudentSelect(student);
+                      console.log('Card clicked for student:', student);
+                      // Allow selection regardless of current status
+                      handleStudentSelect(student);
                     }}
                   >
                     <div style={{ width: "100%", height: "200px", overflow: "hidden" }}>
@@ -180,32 +220,52 @@ const StudentSelectPage = () => {
                       <Card.Title>{student.name}</Card.Title>
                       <Card.Text>{student.email}</Card.Text>
                       <Card.Text>{student.phone}</Card.Text>
+                      {student.mentor_id && (
+                        <div className="mt-2">
+                          <small className="text-warning">
+                            <strong>Currently assigned to Mentor ID: {student.mentor_id}</strong>
+                          </small>
+                        </div>
+                      )}
+                      {student.evaluated_by && (
+                        <div className="mt-2">
+                          <small className="text-info">
+                            <strong>Evaluated by Mentor ID: {student.evaluated_by}</strong>
+                          </small>
+                        </div>
+                      )}
                     </Card.Body>
                     <Card.Footer>
-                      {student.mentor_id ? (
-                        <Button variant="warning" disabled>
-                          Assigned
-                        </Button>
-                      ) : student.evaluated_by ? (
-                        <Button variant="danger" disabled>
-                          Evaluated
-                        </Button>
-                      ) : selectedStudents
-                          .map((s) => s.id)
-                          .includes(student.id) ? (
+                      {selectedStudents.some((s) => s.id === student.id) ? (
                         <Button
                           variant="outline-danger"
-                          onClick={() => handleStudentDeselect(student)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStudentDeselect(student);
+                          }}
                         >
                           Deselect
                         </Button>
                       ) : (
                         <Button
                           variant="outline-primary"
-                          onClick={() => handleStudentSelect(student)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStudentSelect(student);
+                          }}
                         >
-                          Select
+                          {student.mentor_id ? 'Reassign' : student.evaluated_by ? 'Re-evaluate' : 'Select'}
                         </Button>
+                      )}
+                      {student.mentor_id && (
+                        <div className="mt-1">
+                          <small className="text-muted">Currently assigned to mentor</small>
+                        </div>
+                      )}
+                      {student.evaluated_by && (
+                        <div className="mt-1">
+                          <small className="text-muted">Already evaluated</small>
+                        </div>
                       )}
                     </Card.Footer>
                   </Card>
@@ -214,23 +274,46 @@ const StudentSelectPage = () => {
             </div>
           </Col>
           <Col md={4} className="text-center">
-            <h2 className="mt-4 mb-3">Selected Students</h2>
+            <h2 className="mt-4 mb-3">Selected Students ({selectedStudents.length})</h2>
+            
+            {/* Debug info */}
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
+              Debug: {selectedStudents.length} students selected
+            </div>
+            
             <ul className="list-unstyled">
-              {selectedStudents.map((student) => (
-                <div className="card mb-3" key={student.id}>
-                  <div className="card-body">
-                    <h5 className="card-title">{student.name}</h5>
-                    <p className="card-text">{`Email: ${student.email}`}</p>
-                    <p className="card-text">{`Phone: ${student.phone}`}</p>
-                    <button
-                      className="btn btn-outline-danger"
-                      onClick={() => handleStudentDeselect(student)}
-                    >
-                      Deselect
-                    </button>
-                  </div>
+              {selectedStudents.length === 0 ? (
+                <div className="text-muted">
+                  <p>No students selected yet</p>
+                  <p>Click on student cards to select them</p>
                 </div>
-              ))}
+              ) : (
+                selectedStudents.map((student) => (
+                  <div className="card mb-3" key={student.id}>
+                    <div className="card-body">
+                      <h5 className="card-title">{student.name}</h5>
+                      <p className="card-text">{`Email: ${student.email}`}</p>
+                      <p className="card-text">{`Phone: ${student.phone}`}</p>
+                      {student.mentor_id && (
+                        <div className="alert alert-warning py-1 mb-2">
+                          <small>⚠️ Currently assigned to another mentor</small>
+                        </div>
+                      )}
+                      {student.evaluated_by && (
+                        <div className="alert alert-info py-1 mb-2">
+                          <small>ℹ️ Already evaluated</small>
+                        </div>
+                      )}
+                      <button
+                        className="btn btn-outline-danger"
+                        onClick={() => handleStudentDeselect(student)}
+                      >
+                        Deselect
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </ul>
             <Button
               className="mt-4 confirmation-button"
