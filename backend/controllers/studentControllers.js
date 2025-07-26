@@ -10,8 +10,8 @@ const searchStudent = (req, res) => {
 
   const searchStudentQuery = `
     SELECT * FROM students
-    WHERE LOWER(name) LIKE ?
-    OR LOWER(email) LIKE ?
+    WHERE LOWER(name) LIKE $1
+    OR LOWER(email) LIKE $2
   `;
 
   db.query(searchStudentQuery, [searchParam, searchParam], (err, result) => {
@@ -20,7 +20,8 @@ const searchStudent = (req, res) => {
       return res.status(500).send("Internal Server Error");
     }
 
-    res.status(200).json(result);
+    const rows = result?.rows || result;
+    res.status(200).json(rows);
   });
 };
 
@@ -31,7 +32,7 @@ const getStudentMarks = (req, res) => {
     SELECT s.id, s.name, s.email, s.phone, sm.idea_marks, sm.execution_marks, sm.presentation_marks, sm.communication_marks, sm.total_marks
     FROM students AS s
     LEFT JOIN student_marks AS sm ON s.id = sm.student_id
-    WHERE s.id = ?
+    WHERE s.id = $1
   `;
 
   db.query(query, [id], (err, result) => {
@@ -40,7 +41,8 @@ const getStudentMarks = (req, res) => {
       return res.status(500).send("Internal Server Error");
     }
 
-    res.status(200).json(result[0]);
+    const rows = result?.rows || result;
+    res.status(200).json(rows[0]);
   });
 };
 
@@ -52,7 +54,7 @@ const generatePDFandMail = async (req, res) => {
   SELECT s.id, s.name, s.email, s.phone, sm.idea_marks, sm.execution_marks, sm.presentation_marks, sm.communication_marks, sm.total_marks
   FROM students AS s
   LEFT JOIN student_marks AS sm ON s.id = sm.student_id
-  WHERE s.id = ?
+  WHERE s.id = $1
 `;
 
   db.query(query, [studentId], (err, result) => {
@@ -61,7 +63,8 @@ const generatePDFandMail = async (req, res) => {
       return res.status(500).send("Internal Server Error");
     }
 
-    const student = result[0];
+    const rows = result?.rows || result;
+    const student = rows[0];
     const doc = new PDFDocument();
     doc.text(`Student Name: ${student.name}`, { align: "center" });
     doc.text(`Student Email: ${student.email}`, { align: "center" });
@@ -88,7 +91,7 @@ const generatePDFandMail = async (req, res) => {
     });
 
     doc.on("end", function () {
-      const transporter = nodemailer.createTransport({
+      const transporter = nodemailer.createTransporter({
         service: "gmail",
         auth: {
           user: process.env.EMAIL,

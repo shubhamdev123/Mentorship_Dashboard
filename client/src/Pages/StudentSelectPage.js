@@ -81,9 +81,13 @@ const StudentSelectPage = () => {
     if (typeof data === "string") {
       setMessage(data);
     } else {
-      setStudents(data);
+      const sortedData = data.sort((a, b) => {
+        return a.name.localeCompare(b.name);
+      });
+      setStudents(sortedData);
     }
   };
+  
 
   // Fetch all students when the page loads
   useEffect(() => {

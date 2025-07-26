@@ -1,7 +1,8 @@
 const express = require("express"); // Express framework for Node.js
 const bodyParser = require("body-parser"); // Middleware for handling request bodies
+const path = require("path");
 const db = require("./config/db"); // Connection to database
-const port = 3001; // Port number for the server to listen on
+const port = process.env.PORT || 3001; // Port number for the server to listen on
 
 require('dotenv').config(); // Load environment variables from .env file
 
@@ -15,12 +16,18 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, '../client/build')));
+
 // Route handlers for the mentor and student routes
 app.use("/mentors", mentorRoutes);
 app.use("/students", studentRoutes);
 
-app.get("/", (req, res) => {
-  res.send("Server is running...");
+// Serve React app for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/build/index.html'));
 });
 
-app.listen(port);
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});

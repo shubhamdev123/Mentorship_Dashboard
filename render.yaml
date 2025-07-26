@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: mentorship-dashboard
+    env: node
+    buildCommand: npm install && cd client && npm install && npm run build && cd ../backend && npm install
+    startCommand: cd backend && node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: mentorship-db
+    databaseName: dashboard
+    user: dashboard_user
