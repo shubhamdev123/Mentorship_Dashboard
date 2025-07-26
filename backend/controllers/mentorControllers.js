@@ -265,6 +265,10 @@ const markStudent = (req, res) => {
             updateMarksQuery += ` communication_marks = ${communication_marks},`;
           }
 
+          // Calculate total_marks for PostgreSQL
+          const total = (idea_marks || 0) + (execution_marks || 0) + (presentation_marks || 0) + (communication_marks || 0);
+          updateMarksQuery += ` total_marks = ${total},`;
+
           updateMarksQuery = updateMarksQuery.slice(0, -1);
           updateMarksQuery += ` WHERE student_id = ${studentId}`;
 
@@ -278,11 +282,12 @@ const markStudent = (req, res) => {
           });
         } else {
           // If the student has not been marked, add the marks to the marks table
-          const addMarksQuery = `INSERT INTO student_marks (student_id, idea_marks, execution_marks, presentation_marks, communication_marks) VALUES (${studentId}, ${
+          const total = (idea_marks || 0) + (execution_marks || 0) + (presentation_marks || 0) + (communication_marks || 0);
+          const addMarksQuery = `INSERT INTO student_marks (student_id, idea_marks, execution_marks, presentation_marks, communication_marks, total_marks) VALUES (${studentId}, ${
             idea_marks || null
           }, ${execution_marks || null}, ${presentation_marks || null}, ${
             communication_marks || null
-          })`;
+          }, ${total})`;
 
           db.query(addMarksQuery, (err, result) => {
             if (err) {
