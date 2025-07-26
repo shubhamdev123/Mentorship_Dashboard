@@ -90,8 +90,11 @@ const generatePDFandMail = async (req, res) => {
     doc.on("end", function () {
       console.log('Email config:', { email: process.env.EMAIL, pass: process.env.APP_PASS ? 'SET' : 'NOT SET' });
       
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         service: "gmail",
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
         auth: {
           user: process.env.EMAIL,
           pass: process.env.APP_PASS,

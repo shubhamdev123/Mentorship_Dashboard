@@ -55,19 +55,32 @@ const StudentSelectPage = () => {
 
   // Function to handle confirmation of selected students and assign them to the mentor
   const handleConfirmSelection = async () => {
+    console.log('Confirm selection clicked');
+    console.log('Selected students:', selectedStudents);
+    console.log('Mentor:', mentor);
+    
     // Check if there are at least 1 selected students
     if (selectedStudents.length >= 1) {
       if (selectedStudents.length > 4) {
         alert("Please select at most 4 students");
       } else {
-        const data = await assignStudent(
-          mentor.id,
-          selectedStudents.map((student) => student.id)
-        );
-        if (typeof data === "string") {
-          setMessage(data);
-        } else {
-          navigate("/student-view");
+        try {
+          const data = await assignStudent(
+            mentor.id,
+            selectedStudents.map((student) => student.id)
+          );
+          console.log('API response:', data);
+          
+          if (typeof data === "string") {
+            setMessage(data);
+            console.log('Error message set:', data);
+          } else {
+            console.log('Navigating to student-view');
+            navigate("/student-view");
+          }
+        } catch (error) {
+          console.error('Error in handleConfirmSelection:', error);
+          setMessage('An error occurred while assigning students');
         }
       }
     } else {
