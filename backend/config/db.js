@@ -39,6 +39,19 @@ try {
         database: connection.config.database,
         port: connection.config.port
       });
+      
+      // Try to reconnect after 5 seconds
+      setTimeout(() => {
+        console.log('Attempting to reconnect to database...');
+        connection.connect((retryErr) => {
+          if (retryErr) {
+            console.error('Reconnection failed:', retryErr);
+          } else {
+            console.log('Reconnected to database successfully');
+            createTables();
+          }
+        });
+      }, 5000);
       return;
     }
     console.log('Connected to database server successfully');
@@ -121,6 +134,15 @@ const query = (sql, params, callback) => {
     console.error('Database connection not available');
     if (callback) {
       callback(new Error('Database connection not available'), null);
+    }
+    return;
+  }
+  
+  // Check if connection is still alive
+  if (connection.state === 'disconnected') {
+    console.error('Database connection is disconnected');
+    if (callback) {
+      callback(new Error('Database connection is disconnected'), null);
     }
     return;
   }
