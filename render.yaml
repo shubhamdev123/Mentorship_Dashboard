@@ -3,7 +3,7 @@ services:
     name: mentorship-dashboard
     env: node
     buildCommand: npm install && cd client && npm install && npm run build
-    startCommand: node backend/server.js
+    startCommand: node deploy-render.js
     envVars:
       - key: NODE_ENV
         value: production

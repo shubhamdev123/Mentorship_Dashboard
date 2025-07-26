@@ -21,6 +21,7 @@ try {
   connection.connect((err) => {
     if (err) {
       console.error('Error connecting to database:', err);
+      console.log('Database connection failed, but continuing...');
       return;
     }
     console.log('Connected to database server successfully');
@@ -31,11 +32,12 @@ try {
 
 } catch (error) {
   console.error('Error creating database connection:', error);
+  console.log('Database connection error, but continuing...');
 }
 
 const createTables = () => {
   if (!connection) {
-    console.error('No database connection available');
+    console.log('No database connection available, skipping table creation');
     return;
   }
 

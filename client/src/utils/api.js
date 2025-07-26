@@ -1,6 +1,5 @@
 async function searchMentor(searchQuery) {
   const response = await fetch(`/mentors/search?q=${searchQuery}`);
-  let data;
   if(response.status === 200){
     try {
       return await response.json();
