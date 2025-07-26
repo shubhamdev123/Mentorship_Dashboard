@@ -7,16 +7,27 @@ try {
     console.log('Using DATABASE_URL for connection');
     // Parse DATABASE_URL to extract connection parameters
     const url = new URL(process.env.DATABASE_URL);
-    connection = mysql.createConnection({
+    // For FreeSQL, we need to handle SSL differently
+    const connectionConfig = {
       host: url.hostname,
       user: url.username,
       password: url.password,
       port: url.port || 3306,
       database: url.pathname.substring(1), // Remove leading slash
-      ssl: {
-        rejectUnauthorized: false
-      }
+      // Remove SSL for FreeSQL compatibility
+      // ssl: {
+      //   rejectUnauthorized: false
+      // }
+    };
+    
+    console.log('Connection config:', {
+      host: connectionConfig.host,
+      user: connectionConfig.user,
+      database: connectionConfig.database,
+      port: connectionConfig.port
     });
+    
+    connection = mysql.createConnection(connectionConfig);
   } else {
     console.log('Using local database configuration');
     connection = mysql.createConnection({
@@ -138,12 +149,24 @@ const query = (sql, params, callback) => {
     return;
   }
   
-  // Check if connection is still alive
+  // Check if connection is still alive and try to reconnect if needed
   if (connection.state === 'disconnected') {
-    console.error('Database connection is disconnected');
-    if (callback) {
-      callback(new Error('Database connection is disconnected'), null);
-    }
+    console.log('Database connection is disconnected, attempting to reconnect...');
+    connection.connect((err) => {
+      if (err) {
+        console.error('Failed to reconnect:', err);
+        if (callback) {
+          callback(new Error('Database connection is disconnected'), null);
+        }
+        return;
+      }
+      console.log('Reconnected successfully, executing query...');
+      if (callback) {
+        connection.query(sql, params, callback);
+      } else {
+        return connection.query(sql, params);
+      }
+    });
     return;
   }
   
