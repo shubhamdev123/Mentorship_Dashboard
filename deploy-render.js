@@ -32,7 +32,36 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    database: db ? 'Connected' : 'Not connected'
+    database: db ? 'Connected' : 'Not connected',
+    databaseUrl: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+    nodeEnv: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Database test route
+app.get('/test-db', (req, res) => {
+  if (!db) {
+    return res.json({ 
+      status: 'ERROR', 
+      message: 'Database connection not available',
+      databaseUrl: process.env.DATABASE_URL ? 'SET' : 'NOT SET'
+    });
+  }
+  
+  db.query('SELECT 1 as test', (err, result) => {
+    if (err) {
+      res.json({ 
+        status: 'ERROR', 
+        message: 'Database query failed',
+        error: err.message
+      });
+    } else {
+      res.json({ 
+        status: 'SUCCESS', 
+        message: 'Database connection working',
+        result: result
+      });
+    }
   });
 });
 
@@ -86,6 +115,16 @@ try {
       res.json({ message: 'Student routes not properly loaded' });
     });
   }
+  
+  // Add a route to check if API routes are working
+  app.get('/api-status', (req, res) => {
+    res.json({
+      status: 'API Routes Status',
+      mentorRoutes: typeof mentorRoutes === 'function' ? 'Loaded' : 'Failed',
+      studentRoutes: typeof studentRoutes === 'function' ? 'Loaded' : 'Failed',
+      database: db ? 'Available' : 'Not Available'
+    });
+  });
   
 } catch (error) {
   console.error('Error loading routes:', error);

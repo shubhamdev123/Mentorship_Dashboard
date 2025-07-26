@@ -97,4 +97,25 @@ const createTables = () => {
   });
 };
 
-module.exports = connection;
+// Create a wrapper function for database queries
+const query = (sql, params, callback) => {
+  if (!connection) {
+    console.error('Database connection not available');
+    if (callback) {
+      callback(new Error('Database connection not available'), null);
+    }
+    return;
+  }
+  
+  if (callback) {
+    connection.query(sql, params, callback);
+  } else {
+    return connection.query(sql, params);
+  }
+};
+
+// Export both the connection and the query function
+module.exports = {
+  connection,
+  query
+};

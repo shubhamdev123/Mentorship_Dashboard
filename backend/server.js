@@ -1,14 +1,26 @@
 const express = require("express"); // Express framework for Node.js
 const bodyParser = require("body-parser"); // Middleware for handling request bodies
 const path = require("path");
-const db = require("./config/db"); // Connection to database
 const port = process.env.PORT || 3001; // Port number for the server to listen on
 
 require('dotenv').config(); // Load environment variables from .env file
 
-// Import the route handlers for mentors and students
-const mentorRoutes = require("./routes/mentorRoutes");
-const studentRoutes = require("./routes/studentRoutes");
+// Import the route handlers for mentors and students with error handling
+let mentorRoutes, studentRoutes;
+
+try {
+  mentorRoutes = require("./routes/mentorRoutes");
+  studentRoutes = require("./routes/studentRoutes");
+} catch (error) {
+  console.error('Error loading routes:', error);
+  // Create fallback routes
+  mentorRoutes = express.Router();
+  studentRoutes = express.Router();
+  
+  // Add fallback endpoints
+  mentorRoutes.get('*', (req, res) => res.status(500).json({ error: 'Mentor routes not available' }));
+  studentRoutes.get('*', (req, res) => res.status(500).json({ error: 'Student routes not available' }));
+}
 
 const app = express();
 

@@ -1,4 +1,4 @@
-const db = require("../config/db");
+const { query } = require("../config/db");
 
 // Controller for searching mentors
 const searchMentor = (req, res) => {
@@ -6,7 +6,7 @@ const searchMentor = (req, res) => {
 
   const searchMentorQuery = `SELECT * FROM mentors WHERE LOWER(name) LIKE '%${searchQuery}%' OR LOWER(email) LIKE '%${searchQuery}%'`;
 
-  db.query(searchMentorQuery, (err, result) => {
+  query(searchMentorQuery, (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).send("Internal Server Error");

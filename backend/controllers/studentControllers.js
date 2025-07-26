@@ -1,4 +1,4 @@
-const db = require("../config/db");
+const { query } = require("../config/db");
 const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
