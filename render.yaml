@@ -7,8 +7,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-
-databases:
-  - name: mentorship-db
-    databaseName: dashboard
-    user: dashboard_user
+      - key: EMAIL
+        sync: false
+      - key: APP_PASS
+        sync: false
