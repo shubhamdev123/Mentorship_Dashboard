@@ -10,8 +10,8 @@ const searchStudent = (req, res) => {
 
   const searchStudentQuery = `
     SELECT * FROM students
-    WHERE LOWER(name) LIKE $1
-    OR LOWER(email) LIKE $2
+    WHERE LOWER(name) LIKE ?
+    OR LOWER(email) LIKE ?
   `;
 
   db.query(searchStudentQuery, [searchParam, searchParam], (err, result) => {
@@ -20,8 +20,7 @@ const searchStudent = (req, res) => {
       return res.status(500).send("Internal Server Error");
     }
 
-    const rows = result?.rows || result;
-    res.status(200).json(rows);
+    res.status(200).json(result);
   });
 };
 
@@ -32,7 +31,7 @@ const getStudentMarks = (req, res) => {
     SELECT s.id, s.name, s.email, s.phone, sm.idea_marks, sm.execution_marks, sm.presentation_marks, sm.communication_marks, sm.total_marks
     FROM students AS s
     LEFT JOIN student_marks AS sm ON s.id = sm.student_id
-    WHERE s.id = $1
+    WHERE s.id = ?
   `;
 
   db.query(query, [id], (err, result) => {
@@ -41,8 +40,7 @@ const getStudentMarks = (req, res) => {
       return res.status(500).send("Internal Server Error");
     }
 
-    const rows = result?.rows || result;
-    res.status(200).json(rows[0]);
+    res.status(200).json(result[0]);
   });
 };
 
@@ -54,7 +52,7 @@ const generatePDFandMail = async (req, res) => {
   SELECT s.id, s.name, s.email, s.phone, sm.idea_marks, sm.execution_marks, sm.presentation_marks, sm.communication_marks, sm.total_marks
   FROM students AS s
   LEFT JOIN student_marks AS sm ON s.id = sm.student_id
-  WHERE s.id = $1
+  WHERE s.id = ?
 `;
 
   db.query(query, [studentId], (err, result) => {
@@ -63,8 +61,7 @@ const generatePDFandMail = async (req, res) => {
       return res.status(500).send("Internal Server Error");
     }
 
-    const rows = result?.rows || result;
-    const student = rows[0];
+    const student = result[0];
     const doc = new PDFDocument();
     doc.text(`Student Name: ${student.name}`, { align: "center" });
     doc.text(`Student Email: ${student.email}`, { align: "center" });
@@ -91,12 +88,17 @@ const generatePDFandMail = async (req, res) => {
     });
 
     doc.on("end", function () {
+      console.log('Email config:', { email: process.env.EMAIL, pass: process.env.APP_PASS ? 'SET' : 'NOT SET' });
+      
       const transporter = nodemailer.createTransporter({
         service: "gmail",
         auth: {
           user: process.env.EMAIL,
           pass: process.env.APP_PASS,
         },
+        tls: {
+          rejectUnauthorized: false
+        }
       });
 
       // Create the mail options object with the PDF attachment
@@ -114,17 +116,27 @@ const generatePDFandMail = async (req, res) => {
         ],
       };
 
-      // Send the email with the PDF attachment
-      transporter.sendMail(mailOptions, function (error, info) {
+      // Verify transporter configuration
+      transporter.verify(function(error, success) {
         if (error) {
-          console.log(error);
-          res.status(500).json({ message: "Failed to send email" });
-        } else {
-          console.log("Email sent: " + info.response);
-          res
-            .status(200)
-            .json({ message: "Evaluated and email sent" });
+          console.log('Transporter verification failed:', error);
+          return res.status(500).json({ message: "Email configuration error", error: error.message });
         }
+        
+        console.log('Transporter verified, sending email...');
+        
+        // Send the email with the PDF attachment
+        transporter.sendMail(mailOptions, function (error, info) {
+          if (error) {
+            console.log('Email send error:', error);
+            res.status(500).json({ message: "Failed to send email", error: error.message });
+          } else {
+            console.log("Email sent: " + info.response);
+            res
+              .status(200)
+              .json({ message: "Evaluated and email sent" });
+          }
+        });
       });
     });
 
