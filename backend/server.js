@@ -9,8 +9,6 @@ require('dotenv').config(); // Load environment variables from .env file
 // Import the route handlers for mentors and students
 const mentorRoutes = require("./routes/mentorRoutes");
 const studentRoutes = require("./routes/studentRoutes");
-const testRoutes = require("./routes/testRoutes");
-const debugRoutes = require("./routes/debugRoutes");
 
 const app = express();
 
@@ -24,8 +22,6 @@ app.use(express.static(path.join(__dirname, '../client/build')));
 // Route handlers for the mentor and student routes
 app.use("/mentors", mentorRoutes);
 app.use("/students", studentRoutes);
-app.use("/test", testRoutes);
-app.use("/debug", debugRoutes);
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {
